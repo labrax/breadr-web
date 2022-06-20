@@ -18,7 +18,8 @@ class AddNodeHandler(tornado.web.RequestHandler):
         print(data)
         global a
         a = a + 1
-        self.write(json.dumps({'node_id': a}))
+        r = json.dumps({'node_id': a})
+        self.write(r)
 
 
 def make_app():
