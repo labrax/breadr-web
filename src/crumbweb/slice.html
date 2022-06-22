@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Breadr Web</title>
+  <title>Breadr - {{file}}</title>
 </head>
 <body>
-  <script src="dist/drawflow.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/js/all.min.js" integrity="sha256-KzZiKy0DWYsnwMF+X1DvQngQ2/FxF7MF3Ff72XcpuPs=" crossorigin="anonymous"></script>
+  <script src="/dist/drawflow.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" integrity="sha512-KfkfwYDsLkIlwQp6LFnl8zNdLGxu9YAA1QvwINks4PhcElQSvqcyVLLD9aMhXd13uQjoXtEKNosOWaZqXgel0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-  <link rel="stylesheet" type="text/css" href="dist/drawflow.min.css" />
-  <link rel="stylesheet" type="text/css" href="dist/beautiful.css" />
+  <link rel="stylesheet" type="text/css" href="/dist/drawflow.min.css" />
+  <link rel="stylesheet" type="text/css" href="/dist/beautiful.css" />
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css" integrity="sha256-h20CPZ0QyXlBuAw7A+KluUYx/3pK+c7lYEpqLTlxjYQ=" crossorigin="anonymous" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
@@ -19,12 +19,32 @@
   <script src="https://unpkg.com/micromodal/dist/micromodal.min.js"></script>
 
   <header>
-    <h2>Breadr</h2>
+    <h3>Breadr</h3>
   </header>
+
   <div class="wrapper">
     <div class="col">
-      <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="multiple">
-        <i class="fas fa-code-branch"></i><span> Multiple inputs/outputs</span>
+      <div class="col-section">
+        <div class="hide-section basics" onclick="hideSection('basics')">Basics</div>
+        <div class="col-section-values basics">
+          <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="input">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i><span> Input</span>
+          </div>
+          <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="output">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i><span> Output</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-section">
+        <div class="hide-section crumbs" onclick="hideSection('crumbs')">Crumbs</div>
+        <div class="col-section-values crumbs">
+          <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="multiple">
+            <i class="fas fa-code"></i><span> AAA</span>
+          </div>
+          <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="multiple">
+            <i class="fas fa-code"></i><span> BBB</span>
+          </div>
+        </div>
       </div>
     </div>
     <div class="col-right">
@@ -36,6 +56,15 @@
           <i id="lock" class="fas fa-lock" onclick="editor.editor_mode='fixed'; changeMode('lock');"></i>
           <i id="unlock" class="fas fa-lock-open" onclick="editor.editor_mode='edit'; changeMode('unlock');" style="display:none;"></i>
         </div>
+        <div class="btn-refresh">
+          <i id="refresh" class="fas fa-refresh" onclick="editor.refresh();"></i>
+        </div>
+        <div class="btn-run">
+          <i id="run" class="fas fa-play" onclick="editor.run();"></i>
+        </div>
+        <div class="btn-save">
+          <i id="save" class="fa-solid fa-floppy-disk" onclick="editor.save();"></i>
+        </div>
         <div class="bar-zoom">
           <i class="fas fa-search-minus" onclick="editor.zoom_out()"></i>
           <i class="fas fa-search" onclick="editor.zoom_reset()"></i>
@@ -46,6 +75,26 @@
   </div>
 
   <script>
+    var file = "{{file}}";
+
+    function hideSection(name) {
+      var sec = document.getElementsByClassName('col-section-values ' + name)[0];
+      if(sec.style.display == "none") {
+        sec.style.display = "block";
+      } else {
+        sec.style.display = "none";
+      }
+    }
+
+    function onParameterChange(node_id) {
+      var node = document.getElementsByClassName('node-name-' + node_id)[0];
+      var parent = node.parentElement.parentElement.getElementsByClassName('title-box')[0].children[0];
+      parent.classList.remove('green-iconcolor');
+      parent.classList.add('red-iconcolor');
+    }
+
+
+    var verbose = false;
     var id = document.getElementById("drawflow");
     const editor = new Drawflow(id);
     editor.reroute = true;
@@ -55,33 +104,42 @@
 
     // Events!
     editor.on('nodeCreated', function(id) {
-      console.log("Node created " + id);
+      if(verbose)
+        console.log("Node created " + id);
     })
 
     editor.on('nodeRemoved', function(id) {
-      console.log("Node removed " + id);
+      if(verbose)
+        console.log("Node removed " + id);
     })
 
     editor.on('nodeSelected', function(id) {
-      console.log("Node selected " + id);
+      if(verbose)
+        console.log("Node selected " + id);
     })
 
     editor.on('moduleCreated', function(name) {
-      console.log("Module Created " + name);
+      if(verbose)
+        console.log("Module Created " + name);
     })
 
     editor.on('moduleChanged', function(name) {
-      console.log("Module Changed " + name);
+      if(verbose)
+        console.log("Module Changed " + name);
     })
 
     editor.on('connectionCreated', function(connection) {
-      console.log('Connection created');
-      console.log(connection);
+      if(verbose){
+        console.log('Connection created');
+        console.log(connection);
+      }
     })
 
     editor.on('connectionRemoved', function(connection) {
-      console.log('Connection removed');
-      console.log(connection);
+      if(verbose) {
+        console.log('Connection removed');
+        console.log(connection);
+      }
     })
 
     /*editor.on('mouseMove', function(position) {
@@ -89,23 +147,28 @@
     })*/
 
     editor.on('nodeMoved', function(id) {
-      console.log("Node moved " + id);
+      if(verbose)
+        console.log("Node moved " + id);
     })
 
     editor.on('zoom', function(zoom) {
-      console.log('Zoom level ' + zoom);
+      if(verbose)
+        console.log('Zoom level ' + zoom);
     })
 
     editor.on('translate', function(position) {
-      console.log('Translate x:' + position.x + ' y:'+ position.y);
+      if(verbose)
+        console.log('Translate x:' + position.x + ' y:'+ position.y);
     })
 
     editor.on('addReroute', function(id) {
-      console.log("Reroute added " + id);
+      if(verbose)
+        console.log("Reroute added " + id);
     })
 
     editor.on('removeReroute', function(id) {
-      console.log("Reroute removed " + id);
+      if(verbose)
+        console.log("Reroute removed " + id);
     })
     /* DRAG EVENT */
 
@@ -156,20 +219,7 @@
       pos_x = pos_x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)) - (editor.precanvas.getBoundingClientRect().x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)));
       pos_y = pos_y * ( editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)) - (editor.precanvas.getBoundingClientRect().y * ( editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)));
 
-      switch (name) {
-        case 'multiple':
-          var multiple = `
-          <div>
-            <div class="title-box"><i class="fas fa-code-branch"></i> AAAAAAAAAAAA</div>
-            <div class="box">
-              <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
-            </div>
-          </div>
-          `;
-          editor.addNode('multiple', 3, 2, pos_x, pos_y, 'multiple', {}, multiple, false, {1: {'name': 'in1', 'type': 'int'}, 2: {'name': 'in2', 'type': 'int'}, 3: {'name': 'in3', 'type': 'int'}}, {1: {'name': 'out1', 'type': 'int'}, 2: {'name': 'out2', 'type': 'str'}})
-          break;
-        default:
-      }
+      editor.addNode(name, pos_x, pos_y);
     }
 
     var transform = '';
