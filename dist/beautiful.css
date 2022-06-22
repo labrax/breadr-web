@@ -14,7 +14,7 @@ html, body {
 }
 
 header {
-  height: 66px;
+  height: 38px;
   border-bottom: 1px solid var(--border-color);
   padding-left: 20px;
 }
@@ -51,7 +51,7 @@ header a {
 
 .col {
   overflow: auto;
-  width: 300px;
+  width: 200px;
   height: 100%;
   border-right: 1px solid var(--border-color);
 }
@@ -138,6 +138,54 @@ cursor: pointer;
   cursor: pointer;
 }
 
+.btn-refresh {
+  float: right;
+  position: absolute;
+  top: 110px;
+  left: 10px;
+  display: flex;
+  font-size: 24px;
+  color: white;
+  padding: 5px 10px;
+  background: #555555;
+  border-radius: 4px;
+  border-right: 1px solid var(--border-color);
+  z-index: 5;
+  cursor: pointer;
+}
+
+.btn-run {
+  float: right;
+  position: absolute;
+  top: 60px;
+  left: 10px;
+  display: flex;
+  font-size: 24px;
+  color: white;
+  padding: 5px 10px;
+  background: #555555;
+  border-radius: 4px;
+  border-right: 1px solid var(--border-color);
+  z-index: 5;
+  cursor: pointer;
+}
+
+.btn-save {
+  float: right;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  font-size: 24px;
+  color: white;
+  padding: 5px 10px;
+  background: #555555;
+  border-radius: 4px;
+  border-right: 1px solid var(--border-color);
+  z-index: 5;
+  cursor: pointer;
+}
+
 .bar-zoom {
   float: right;
   position: absolute;
@@ -162,8 +210,8 @@ cursor: pointer;
 
 #drawflow {
   position: relative;
-  width: calc(100vw - 301px);
-  height: calc(100% - 40px);
+  width: calc(100vw - 201px);
+  height: calc(100% - 0px);
   background: var(--background-color);
   background-size: 25px 25px;
   background-image:
@@ -359,4 +407,26 @@ cursor: pointer;
   .modal-content {
     width: 80%;
   }
+}
+
+.hide-section {
+  line-height: 50px;
+  border-bottom: 1px solid var(--border-color);
+  padding-left: 20px;
+}
+
+.hide-section:hover {
+  background-color: #f1f1f1;
+}
+
+.col-section-values {
+  padding-left: 20px;
+}
+
+.red-iconcolor {
+  color: red;
+}
+
+.green-iconcolor {
+  color: green;
 }
