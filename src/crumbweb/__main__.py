@@ -1,4 +1,11 @@
+"""Front-end/back-end connector"""
+
+from node_definitions import get_input_definition, get_output_definition, get_node_definition
 from html_templates import function_list_as_html
+from sessions import SessionStore
+
+import base64
+import os
 import json
 import tornado
 import tornado.ioloop
@@ -7,60 +14,81 @@ import tornado.template
 
 loader = tornado.template.Loader('.')
 
-static_path_dir = '../../dist/'
-index_file = 'index.html'
-slice_file = 'slice.html'
+STATIC_PATH = '../../dist/'
+INDEX_FILE = 'index.html'
+SLICE_FILE = 'slice.html'
+SETTINGS = {
+    "cookie_secret": base64.b64encode(os.urandom(50)).decode('ascii'),
+    "login_url": "/login",
+    'debug': False
+}
+BREADR_PASSWORD = '123'
+
 a = 0
 
 
-from node_definitions import get_input_definition, get_output_definition, get_node_definition
+class BaseHandler(tornado.web.RequestHandler):
+    def get_current_user(self):
+        pwd = self.get_secure_cookie('password')
+        if not pwd:
+            return None
+        return tornado.escape.json_decode(pwd)
 
-class MainHandler(tornado.web.RequestHandler):
+
+class MainHandler(BaseHandler):
+    @tornado.web.authenticated
     def get(self):
-        self.render(index_file)
+        self.render(INDEX_FILE)
 
 
-class SliceHandler(tornado.web.RequestHandler):
+class LoginHandler(BaseHandler):
+    def get(self):
+        params = {
+            "errormessage": self.get_argument("error", ''),
+            "nextpage": self.get_argument("next", "/")
+        }
+        self.render('login.html', **params)
+
+    def check_permission(self, password):
+        if password == BREADR_PASSWORD:
+            return True
+        return False
+
+    def post(self):
+        password = self.get_argument("password", "")
+        auth = self.check_permission(password)
+        if auth:
+            self.set_current_user(password)
+            self.redirect(self.get_argument("next", u"/"))
+        else:
+            self.redirect(u"/login" + u"?error=" + tornado.escape.url_escape("Invalid password!"))
+
+    def set_current_user(self, password):
+        if password:
+            self.set_secure_cookie("password", tornado.escape.json_encode(password))
+        else:
+            self.clear_cookie("password")
+
+
+class SliceHandler(BaseHandler):
+    @tornado.web.authenticated
     def get(self, file):
-        r = loader.load(slice_file).generate(file=file)
-        # print(r)
+        r = loader.load(SLICE_FILE).generate(file=file)
         self.write(r)
 
 
-class addConnection(tornado.web.RequestHandler):
+class addNode(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        try:
-            # make changes
-            r = json.dumps({'id_output': data['payload']['id_output'], 
-                            'id_input': data['payload']['id_input'], 
-                            'output_class': data['payload']['output_class'], 
-                            'input_class': data['payload']['input_class']})
-            self.write(r)
-        except Exception as e:
-            self.set_status(400)
-            self.write({'error': e})
-
-
-class removeConnection(tornado.web.RequestHandler):
-    def post(self):
-        data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        r = json.dumps({'class_list': data['payload']['class_list']})
-        self.write(r)
-
-
-class addNode(tornado.web.RequestHandler):
-    def post(self):
-        data = tornado.escape.json_decode(self.request.body)
-        print(data)
 
         x_pos = data['payload']['ele_pos_x']
         y_pos = data['payload']['ele_pos_y']
 
         global a
         a = a + 1
+
+        ret = {}
 
         match data['payload']['name']:
             case 'input_element':
@@ -69,82 +97,148 @@ class addNode(tornado.web.RequestHandler):
                 ret = get_output_definition(a, x_pos, y_pos, f'output_{a}')
             case 'multiple_element':
                 icon_str = "fas fa-code-branch"
-                inputs =  {'in1': int, 'in2': str}
-                outputs =  {'out1': str, 'out2': int}
-                description="\n\n\n\n"
+                inputs = {'in1': int, 'in2': str}
+                outputs = {'out1': str, 'out2': int}
+                description = "\n\n\n\n"
                 name = 'crumbcrumbcrumb'
                 ret = get_node_definition(a, name, x_pos, y_pos, inputs, outputs, icon=icon_str, node_description=description)
             case _:
                 'error?'
 
-        print(ret)
-
+        ret['operation'] = 'addNode'
+        print(data, '===>', ret)
         r = json.dumps(ret)
         self.write(r)
 
 
-class removeNodeId(tornado.web.RequestHandler):
+class removeNodeId(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        r = json.dumps({'id': data['payload']['id']})
+        ret = {'id': data['payload']['id']}
+        SessionStore.get_file(data['payload']['file']).removeNode(**ret)
+        ret['operation'] = 'removeNodeId'
+        print(data, '===>', ret)
+        r = json.dumps(ret)
         self.write(r)
 
 
-class nodeMoved(tornado.web.RequestHandler):
+class addConnection(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        r = json.dumps({})
+        try:
+            # make changes
+            ret = {'id_output': data['payload']['id_output'],
+                   'id_input': data['payload']['id_input'],
+                   'output_class': data['payload']['output_class'],
+                   'input_class': data['payload']['input_class']}
+            SessionStore.get_file(data['payload']['file']).addConnection(**ret)
+            ret['operation'] = 'addConnection'
+            print(data, '===>', ret)
+            r = json.dumps(ret)
+            self.write(r)
+        except Exception as e:
+            self.set_status(400)
+            self.write({'error': e})
+
+
+class removeConnection(BaseHandler):
+    @tornado.web.authenticated
+    def post(self):
+        data = tornado.escape.json_decode(self.request.body)
+        ret = {'class_list': data['payload']['class_list']}
+        SessionStore.get_file(data['payload']['file']).removeConnection(**ret)
+        ret['operation'] = 'removeConnection'
+        print(data, '===>', ret)
+        r = json.dumps(ret)
         self.write(r)
 
 
-class zoom(tornado.web.RequestHandler):
+class nodeMoved(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        r = json.dumps({})
+        SessionStore.get_file(data['payload']['file']).move_node(id=data['payload']['id'], x=data['payload']['pos_x'], y=data['payload']['pos_y'])
+        ret = {'operation': 'nodeMoved'}
+        print(data, '===>', ret)
+        r = json.dumps(ret)
         self.write(r)
 
 
-class translate(tornado.web.RequestHandler):
+class zoom(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        r = json.dumps({})
+        SessionStore.get_file(data['payload']['file']).zoom(data['payload']['zoom'])
+        ret = {'operation': 'zoom'}
+        print(data, '===>', ret)
+        r = json.dumps(ret)
         self.write(r)
 
 
-class refresh(tornado.web.RequestHandler):
+class translate(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        r = json.dumps({'html': get_function_list()})
+        SessionStore.get_file(data['payload']['file']).translate(data['payload']['x'], data['payload']['y'])
+        ret = {'operation': 'translate'}
+        print(data, '===>', ret)
+        r = json.dumps(ret)
         self.write(r)
 
 
-class run(tornado.web.RequestHandler):
+class refresh(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        # TODO: implement
-        r = json.dumps({})
+        ret = {'html': function_list_as_html(SessionStore.get_file(data['payload']['file']).get_function_list())}
+        ret['operation'] = 'refresh'
+        print(data, '===>', ret)
+        r = json.dumps(ret)
         self.write(r)
 
 
-class setParameter(tornado.web.RequestHandler):
+class run(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print(data)
-        # TODO: implement
-        # check if we good changing? aka: anything connected here? no duplicates?
-        r = json.dumps({'node': data['payload']['node'], 'name': data['payload']['name'], 'type': data['payload']['type']})
+        all_output = SessionStore.get_file(data['payload']['file']).run()
+        ret = {'output': all_output}
+        ret['operation'] = 'run'
+        print(data, '===>', ret)
+        r = json.dumps(ret)
         self.write(r)
 
 
-def make_app():
-    return tornado.web.Application([
+class setParameter(BaseHandler):
+    @tornado.web.authenticated
+    def post(self):
+        data = tornado.escape.json_decode(self.request.body)
+        ret = {'node': data['payload']['node'], 'name': data['payload']['name'], 'type': data['payload']['type']}
+        SessionStore.get_file(data['payload']['file']).setParameter(**ret)
+        ret['operation'] = 'setParameter'
+        print(data, '===>', ret)
+        r = json.dumps(ret)
+        self.write(r)
+
+
+class save(BaseHandler):
+    @tornado.web.authenticated
+    def post(self):
+        data = tornado.escape.json_decode(self.request.body)
+        SessionStore.get_file(data['payload']['file']).save()
+        ret = {'status': 'ok'}
+        ret['operation'] = 'save'
+        print(data, '===>', ret)
+        r = json.dumps(ret)
+        self.write(r)
+
+
+def main():
+    app = tornado.web.Application([
         (r"/", MainHandler),
+        (r"/login", LoginHandler),
         (r"/slice/(.*)", SliceHandler),
         (r"/api/v1/addNode", addNode),
         (r"/api/v1/removeNodeId", removeNodeId),
@@ -155,12 +249,14 @@ def make_app():
         (r"/api/v1/translate", translate),
         (r"/api/v1/refresh", refresh),
         (r"/api/v1/setParameter", setParameter),
+        (r"/api/v1/save", save),
 
         (r'/(favicon.ico)', tornado.web.StaticFileHandler, {"path": "../../"}),
-        (r'/dist/(.*)', tornado.web.StaticFileHandler, {'path': static_path_dir})
-    ], debug=True)
+        (r'/dist/(.*)', tornado.web.StaticFileHandler, {'path': STATIC_PATH})
+    ], **SETTINGS)
+    app.listen(8080, '127.0.0.1')
+    tornado.ioloop.IOLoop.current().start()
+
 
 if __name__ == "__main__":
-    app = make_app()
-    app.listen(8080)
-    tornado.ioloop.IOLoop.current().start()
+    main()
