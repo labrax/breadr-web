@@ -1,3 +1,4 @@
+from html_templates import function_list_as_html
 import json
 import tornado
 import tornado.ioloop
@@ -13,7 +14,6 @@ a = 0
 
 
 from node_definitions import get_input_definition, get_output_definition, get_node_definition
-from functions import get_function_list
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):

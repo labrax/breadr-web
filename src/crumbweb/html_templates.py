@@ -1,6 +1,8 @@
+"""HTML Templates"""
+
 from tornado.template import Template
 
-### basic
+# basic
 INPUT_NODE_TEMPLATE = Template("""
 <div class="title-box"><i class="fa-solid fa-arrow-right-to-bracket green-iconcolor"></i> Input</div>
 <div class="box">
@@ -8,8 +10,7 @@ INPUT_NODE_TEMPLATE = Template("""
     <input type="text" class="node-name-{{node_id}}" value="{{node_output_name}}" onchange="onParameterChange({{node_id}});" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
     <p>Variable type</p>
     <input type="text" class="node-type-{{node_id}}" value="int" onchange="onParameterChange({{node_id}});" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
-</div>
-""")
+</div>""")
 
 OUTPUT_NODE_TEMPLATE = Template("""
 <div class="title-box"><i class="fa-solid fa-arrow-right-from-bracket green-iconcolor"></i> Output</div>
@@ -18,10 +19,9 @@ OUTPUT_NODE_TEMPLATE = Template("""
     <input type="text" class="node-name-{{node_id}}" value="{{node_input_name}}" onchange="onParameterChange({{node_id}});" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
     <p>Variable type</p>
     <input type="text" class="node-type-{{node_id}}" value="int" onchange="onParameterChange({{node_id}});" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
-</div>
-""")
+</div>""")
 
-### others
+# others
 NODE_TEMPLATE = Template("""
 <div>
     <div class="title-box"><i class="{{node_icon}}"></i> {{node_name}}</div>
@@ -30,7 +30,7 @@ NODE_TEMPLATE = Template("""
     </div>
 </div>""")
 
-### section
+# section
 SECTION_TEMPLATE = Template("""<div class="col-section">
 <div class="hide-section {{section_code}}" onclick="hideSection('{{section_code}}')">{{section_name}}</div>
 <div class="col-section-values {{section_code}}">
@@ -40,11 +40,13 @@ SECTION_TEMPLATE = Template("""<div class="col-section">
 </div>
 {% end %}
 </div>
-</div>
-""")
+</div>""")
 
 
-
-# INPUT_TEMPLATE.generate(node_id='1', node_name='input1')
-
-
+def function_list_as_html(sections):
+    ret = ''
+    for s in sections:
+        section_code = s['code']
+        section_name = s['name']
+        ret += SECTION_TEMPLATE.generate(section_code=section_code, section_name=section_name, functions=s['functions']).decode('utf-8')
+    return ret
