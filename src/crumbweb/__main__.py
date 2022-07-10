@@ -4,6 +4,8 @@ from node_definitions import get_input_definition, get_output_definition, get_no
 from html_templates import function_list_as_html, NAV_TYPES
 from sessions import SessionStore
 
+import math
+from datetime import datetime
 import string
 import random
 import base64
@@ -28,6 +30,7 @@ SETTINGS = {
     "login_url": "/login",
     'debug': False
 }
+
 if 'BREADR_PWD' in os.environ:
     print('Using environment password BREADR_PWD')
     BREADR_PASSWORD = os.environ['BREADR_PWD']
@@ -55,7 +58,6 @@ class MainHandler(BaseHandler):
 class TreeHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self, path):
-        print(f'path is "{path}"')
         if path == '':
             path = '.'
 
@@ -63,20 +65,65 @@ class TreeHandler(BaseHandler):
             return x.split('.')[-1] == 'json'
 
         def get_namelink(x):
-            if isbreadr(x):  # we can open
-                link = f'/slice/{os.path.join(path, x)}'
+            true_file = os.path.join(path, x)
+            if isbreadr(true_file):  # we can open
+                link = f'/slice/{true_file}'
                 return f"""<a href="{link}">{x}</a>"""
-            elif os.path.isfile(x):  # we do not open
+            elif os.path.isfile(true_file):  # we do not open
                 return x
             # folder
-            link = f'/tree/{os.path.join(path, x)}'
+            link = f'/tree/{true_file}'
             return f"""<a href="{link}">{x}</a>"""
 
-        _reported_folders = [f for f in ['..'] + os.listdir(path) if f[0] != '_' and not(f[0] == '.' and f[1] != '.') and not(f == '..' and path == '.')]
-        filefolders = {f: {'type': NAV_TYPES['breadr'] if isbreadr(f) else NAV_TYPES['file'] if os.path.isfile(f) else NAV_TYPES['folder'],
+        def get_type(f):
+            if isbreadr(f):
+                NAV_TYPES['breadr']
+            elif os.path.isfile(f):
+                return NAV_TYPES['file']
+            return NAV_TYPES['folder']
+
+        def get_modified(f):
+            return datetime.fromtimestamp(os.path.getmtime(os.path.join(path, f))).strftime("%Y/%m/%d %H:%M")
+
+        def get_size(f):
+            if not os.path.isfile(os.path.join(path, f)):
+                return ''
+
+            def convert_size(size_bytes):  # https://stackoverflow.com/questions/5194057/better-way-to-convert-file-sizes-in-python
+                if size_bytes == 0:
+                    return "0 B"
+                size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+                i = int(math.floor(math.log(size_bytes, 1024)))
+                p = math.pow(1024, i)
+                s = round(size_bytes / p, 2)
+                return "%s %s" % (s, size_name[i])
+            return convert_size(os.path.getsize(os.path.join(path, f)))
+
+        def is_hidden(f):
+            # if f[0] == '_':  # ignore '_*' files
+            #     return True
+            if f[0] == '.' and f[1] != '.':  # ignore '.*' files
+                return True
+            if f == '..' and path == '.':  # ignore ".." if on base folder
+                return True
+            return False
+
+        files = []
+        folders = []
+        for i in os.listdir(path):
+            if os.path.isfile(os.path.join(path, i)):
+                files.append(i)
+            else:
+                folders.append(i)
+        files.sort()
+        folders.sort()
+
+        _raw_files = ['..'] + folders + files
+        _reported_files = [f for f in _raw_files if not is_hidden(f)]
+        filefolders = {f: {'type': get_type(os.path.join(path, f)),
                            'name': get_namelink(f),
-                           'size': '',
-                           'modified': ''} for f in _reported_folders}
+                           'size': get_size(f),
+                           'modified': get_modified(f)} for f in _reported_files}
         r = loader.load(TREE_FILE).generate(filefolders=filefolders)
         self.write(r)
 
