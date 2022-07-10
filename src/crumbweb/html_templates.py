@@ -42,6 +42,11 @@ SECTION_TEMPLATE = Template("""<div class="col-section">
 </div>
 </div>""")
 
+# nav_element
+NAV_TYPES = {'folder': b'&#128193;',
+             'file': b'&#128221;',
+             'breadr': b'&#127838;'}
+
 
 def function_list_as_html(sections):
     ret = ''

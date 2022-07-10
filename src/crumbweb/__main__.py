@@ -1,7 +1,7 @@
 """Front-end/back-end connector"""
 
 from node_definitions import get_input_definition, get_output_definition, get_node_definition
-from html_templates import function_list_as_html
+from html_templates import function_list_as_html, NAV_TYPES
 from sessions import SessionStore
 
 import string
@@ -47,6 +47,35 @@ class MainHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         self.render(INDEX_FILE)
+
+
+class TreeHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self, path):
+        print(f'path is "{path}"')
+        if path == '':
+            path = '.'
+
+        def isbreadr(x):
+            return x.split('.')[-1] == 'json'
+
+        def get_namelink(x):
+            if isbreadr(x):  # we can open
+                link = f'/slice/{os.path.join(path, x)}'
+                return f"""<a href="{link}">{x}</a>"""
+            elif os.path.isfile(x):  # we do not open
+                return x
+            # folder
+            link = f'/tree/{os.path.join(path, x)}'
+            return f"""<a href="{link}">{x}</a>"""
+        
+        _reported_folders = [f for f in ['..'] + os.listdir(path) if f[0] != '_' and not(f[0] == '.' and f[1] != '.') and not(f == '..' and path == '.')]
+        filefolders = {f: {'type': NAV_TYPES['breadr'] if isbreadr(f) else NAV_TYPES['file'] if os.path.isfile(f) else NAV_TYPES['folder'],
+                           'name': get_namelink(f),
+                           'size': '',
+                           'modified': ''} for f in _reported_folders}
+        r = loader.load(TREE_FILE).generate(filefolders=filefolders)
+        self.write(r)
 
 
 class LoginHandler(BaseHandler):
@@ -253,6 +282,7 @@ def main():
     app = tornado.web.Application([
         (r"/", MainHandler),
         (r"/login", LoginHandler),
+        (r"/tree/(.*)", TreeHandler),
         (r"/slice/(.*)", SliceHandler),
         (r"/api/v1/addNode", addNode),
         (r"/api/v1/removeNodeId", removeNodeId),
