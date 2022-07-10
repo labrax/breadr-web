@@ -16,9 +16,13 @@ import tornado.template
 
 loader = tornado.template.Loader('.')
 
-STATIC_PATH = '../../dist/'
-INDEX_FILE = 'index.html'
-SLICE_FILE = 'slice.html'
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+
+STATIC_PATH = os.path.join(BASE_PATH, 'dist/')
+INDEX_FILE = os.path.join(BASE_PATH, 'html/index.html')
+SLICE_FILE = os.path.join(BASE_PATH, 'html/slice.html')
+TREE_FILE = os.path.join(BASE_PATH, 'html/tree.html')
+
 SETTINGS = {
     "cookie_secret": base64.b64encode(os.urandom(50)).decode('ascii'),
     "login_url": "/login",
@@ -30,7 +34,6 @@ if 'BREADR_PWD' in os.environ:
 else:
     _ops = string.ascii_letters + string.digits
     BREADR_PASSWORD = ''.join([random.choice(_ops) for _ in range(16)])
-TREE_FILE = 'tree.html'
 
 a = 0
 
@@ -68,7 +71,7 @@ class TreeHandler(BaseHandler):
             # folder
             link = f'/tree/{os.path.join(path, x)}'
             return f"""<a href="{link}">{x}</a>"""
-        
+
         _reported_folders = [f for f in ['..'] + os.listdir(path) if f[0] != '_' and not(f[0] == '.' and f[1] != '.') and not(f == '..' and path == '.')]
         filefolders = {f: {'type': NAV_TYPES['breadr'] if isbreadr(f) else NAV_TYPES['file'] if os.path.isfile(f) else NAV_TYPES['folder'],
                            'name': get_namelink(f),
