@@ -4,6 +4,8 @@ from node_definitions import get_input_definition, get_output_definition, get_no
 from html_templates import function_list_as_html
 from sessions import SessionStore
 
+import string
+import random
 import base64
 import os
 import json
@@ -22,7 +24,13 @@ SETTINGS = {
     "login_url": "/login",
     'debug': False
 }
-BREADR_PASSWORD = '123'
+if 'BREADR_PWD' in os.environ:
+    print('Using environment password BREADR_PWD')
+    BREADR_PASSWORD = os.environ['BREADR_PWD']
+else:
+    _ops = string.ascii_letters + string.digits
+    BREADR_PASSWORD = ''.join([random.choice(_ops) for _ in range(16)])
+TREE_FILE = 'tree.html'
 
 a = 0
 
@@ -43,11 +51,17 @@ class MainHandler(BaseHandler):
 
 class LoginHandler(BaseHandler):
     def get(self):
-        params = {
-            "errormessage": self.get_argument("error", ''),
-            "nextpage": self.get_argument("next", "/")
-        }
-        self.render('login.html', **params)
+        password = self.get_argument("password", "")
+        auth = self.check_permission(password)
+        if auth:
+            self.set_current_user(password)
+            self.redirect(self.get_argument("next", u"/"))
+        else:
+            params = {
+                "errormessage": self.get_argument("error", ''),
+                "nextpage": self.get_argument("next", "/")
+            }
+            self.render('login.html', **params)
 
     def check_permission(self, password):
         if password == BREADR_PASSWORD:
@@ -255,6 +269,7 @@ def main():
         (r'/dist/(.*)', tornado.web.StaticFileHandler, {'path': STATIC_PATH})
     ], **SETTINGS)
     app.listen(8080, '127.0.0.1')
+    print(f'Connect using: http://127.0.0.1:8080/login?password={BREADR_PASSWORD}')
     tornado.ioloop.IOLoop.current().start()
 
 
