@@ -1,13 +1,20 @@
 """Store the different files open"""
 
+from node_definitions import get_input_definition, get_output_definition, get_node_definition
+
 import os
+import sys
+sys.path.append('C:/Users/vroth/Google Drive/Projetos/UoB/breadr/src/')
 from typing import Dict
+
+from crumb.bakery_items.slice import Slice
+from crumb.bakery_items.crumb import Crumb
 
 
 class FileState:
     """A file with its slice etc"""
     def __init__(self, filepath):
-        self.slice = None
+        self.slice: Slice = None
         self.node_counter = 0
         self.filepath = filepath
         self.mapping_id_element = {}  # maps UI node ids to the internal nodes
@@ -19,7 +26,7 @@ class FileState:
         if os.path.exists(filepath):
             self.load_from_file(filepath)
         else:
-            pass
+            self.slice = Slice(name=os.path.basename(self.filepath))
 
     def load_from_file(self, path):
         """Load a slice from a file"""
@@ -75,15 +82,45 @@ class FileState:
         self.node_position[id] = (x, y)
 
     def addNode(self, name, pos_x, pos_y) -> dict:
-        # if available, get it
-        # add to slice
-        # add to reference of nodes
-        if name in self.bakery_items_available:
-            ret = self.bakery_items_available[name]
-        raise NotImplementedError
+        """Add a node if available in the bakery_items list"""
+        if name == 'input_element':
+            while True:
+                try:
+                    nname = f'input_{self.node_counter}'
+                    self.slice.add_input(name=nname, type=int)
+                    nnode = ('input', nname)
+                    ret = get_input_definition(self.node_counter, pos_x, pos_y, nname)
+                    break
+                except RuntimeError:
+                    self.node_counter += 1
+        elif name == 'output_element':
+            while True:
+                try:
+                    nname = f'output_{self.node_counter}'
+                    self.slice.add_output(name=nname, type=int)
+                    nnode = ('output', nname)
+                    ret = get_output_definition(self.node_counter, pos_x, pos_y, nname)
+                    break
+                except RuntimeError:
+                    self.node_counter += 1
+        elif name in self.bakery_items_available:
+            if name not in self.slice.bakery_items:
+                self.slice.add_bakery_item(name=name, bakery_item=self.bakery_items_available[name])
+            nnode = self.slice.add_node(name)
+
+            icon_str = "fas fa-code-branch"  # TODO
+            inputs = self.slice.nodes[nnode].input
+            outputs = self.slice.nodes[nnode].output
+            description = "\n\n\n\n"  # TODO
+            name = self.slice.bakery_items[name].name
+            ret = get_node_definition(self.node_counter, name, pos_x, pos_y, inputs, outputs, icon=icon_str, node_description=description)
+        else:
+            raise RuntimeError('Crumb/Slice not defined!')
+
         self.node_position[name] = (pos_x, pos_y)
-        self.mapping_id_element[self.node_counter] = NotImplemented  # slice new node
+        self.mapping_id_element[self.node_counter] = nnode  # slice new node
         self.node_counter += 1
+        return ret
 
     def removeNode(self, id):
         """Remove a node (if possible"""

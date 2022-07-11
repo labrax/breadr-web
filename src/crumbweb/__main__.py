@@ -174,30 +174,8 @@ class addNode(BaseHandler):
     @tornado.web.authenticated
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-
-        x_pos = data['payload']['ele_pos_x']
-        y_pos = data['payload']['ele_pos_y']
-
-        global a
-        a = a + 1
-
-        ret = {}
-
-        match data['payload']['name']:
-            case 'input_element':
-                ret = get_input_definition(a, x_pos, y_pos, f'input_{a}')
-            case 'output_element':
-                ret = get_output_definition(a, x_pos, y_pos, f'output_{a}')
-            case 'multiple_element':
-                icon_str = "fas fa-code-branch"
-                inputs = {'in1': int, 'in2': str}
-                outputs = {'out1': str, 'out2': int}
-                description = "\n\n\n\n"
-                name = 'crumbcrumbcrumb'
-                ret = get_node_definition(a, name, x_pos, y_pos, inputs, outputs, icon=icon_str, node_description=description)
-            case _:
-                'error?'
-
+        print(data)
+        ret = SessionStore.get_file(data['payload']['file']).addNode(data['payload']['name'], data['payload']['ele_pos_x'], data['payload']['ele_pos_y'])
         ret['operation'] = 'addNode'
         print(data, '===>', ret)
         r = json.dumps(ret)
