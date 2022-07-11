@@ -21,6 +21,7 @@ loader = tornado.template.Loader('.')
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 STATIC_PATH = os.path.join(BASE_PATH, 'dist/')
+FAVICON_PATH = os.path.join(BASE_PATH, 'favicon.ico')
 INDEX_FILE = os.path.join(BASE_PATH, 'html/index.html')
 SLICE_FILE = os.path.join(BASE_PATH, 'html/slice.html')
 TREE_FILE = os.path.join(BASE_PATH, 'html/tree.html')
@@ -323,7 +324,7 @@ def main():
         (r"/api/v1/setParameter", setParameter),
         (r"/api/v1/save", save),
 
-        (r'/(favicon.ico)', tornado.web.StaticFileHandler, {"path": "../../"}),
+        (r'/(favicon.ico)', tornado.web.StaticFileHandler, {"path": FAVICON_PATH}),
         (r'/dist/(.*)', tornado.web.StaticFileHandler, {'path': STATIC_PATH})
     ], **SETTINGS)
     app.listen(8080, '127.0.0.1')
